@@ -10,18 +10,15 @@ from pathlib import Path
 from lxml import etree
 import uuid
 
-# Namespaces
+# Links for included namespaces
 NS_ERMS = "https://DILCIS.eu/XML/ERMS"
 NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
-# Namespace map with explicit prefix
+# Namespace dict with explicit prefix
 NSMAP = {
     "erms": NS_ERMS,
     "xsi": NS_XSI
 }
-
-# Unique system identifier for the aggregation or record
-system_id = str(uuid.uuid4())
 
 
 def setup_logging(verbose: bool) -> None:
@@ -65,7 +62,7 @@ def add_aggregations_container(erms_root: etree.Element) -> etree.Element:
 def create_aggregation_for_folder(parent: etree.Element, folder: Path) -> etree.Element:
     aggregation = etree.SubElement(parent, etree.QName(NS_ERMS, "aggregation"))
 
-    aggregation.set("systemIdentifier", system_id)
+    aggregation.set("systemIdentifier", str(uuid.uuid4()))
 
     aggregation.set("aggregationType", "Class")
 
@@ -95,7 +92,7 @@ def create_record_for_file(records_container: etree.Element, file_path: Path, ou
     date = etree.SubElement(dates, etree.QName(NS_ERMS, "date"))
     date.set("dateType", "created")
     created_ts = file_path.stat().st_ctime
-    date.text = datetime.datetime.fromtimestamp(created_ts).isoformat()
+    date.text = datetime.datetime.fromtimestamp(created_ts).replace(microsecond=0).isoformat(timespec="seconds")
 
     object_id = etree.SubElement(record, etree.QName(NS_ERMS, "objectID"))
     object_id.text = file_path.name
@@ -113,6 +110,13 @@ def build_erms_from_folder_structure(root_path: Path, output_path: Path) -> etre
     validate_root_path(root_path)
 
     erms_root = create_root_erms_element()
+    processing_instruction = etree.ProcessingInstruction(
+    "xml-model",
+    'href="erms.sch" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"'
+    )
+
+    erms_root.addprevious(processing_instruction)
+
     aggregations = add_aggregations_container(erms_root)
 
     for child in sorted(root_path.iterdir()):
@@ -143,6 +147,8 @@ def write_xml(tree: etree.ElementTree, output_path: Path) -> None:
         raise FileNotFoundError(f"Output directory does not exist: {output_path.parent}")
 
     logging.info("Writing XML to: %s", output_path)
+
+    root = tree.getroot()
 
     pretty_xml = etree.tostring(
         tree,

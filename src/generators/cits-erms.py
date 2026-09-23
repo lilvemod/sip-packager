@@ -5,6 +5,7 @@ Generate a CITS-ERMS 2.1.0 XML-file from a KLASSA 2.1-based folder structure.
 import argparse
 import datetime
 import logging
+import json
 import sys
 from pathlib import Path
 from lxml import etree
@@ -19,6 +20,12 @@ NSMAP = {
     "erms": NS_ERMS,
     "xsi": NS_XSI
 }
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+KLASSA_PROCESSES_PATH = BASE_DIR / "config" / "klassa_processer.json"
+
+with KLASSA_PROCESSES_PATH.open("r", encoding="utf-8") as f:
+    KLASSA = json.load(f)
 
 
 def setup_logging(verbose: bool) -> None:
@@ -72,9 +79,12 @@ def create_aggregation_for_folder(parent: etree.Element, folder: Path) -> etree.
     information_class = etree.SubElement(aggregation, etree.QName(NS_ERMS, "informationClass"))
     information_class.text = "1"
 
+    if folder.name not in KLASSA:
+        raise KeyError(f"Classification not found in json: {folder.name}")
+
     title = etree.SubElement(aggregation, etree.QName(NS_ERMS, "title"))
     # Change so that the value of title is dynamic and based on the classification of the folder name
-    title.text = folder.name
+    title.text = KLASSA.get(folder.name, folder.name)
 
     classification = etree.SubElement(aggregation, etree.QName(NS_ERMS, "classification"))
     classification.text = folder.name
@@ -125,7 +135,11 @@ def build_erms_from_folder_structure(root_path: Path, output_path: Path) -> etre
             continue
 
         logging.info("Processing folder as aggregation: %s", child)
-        records_container = create_aggregation_for_folder(aggregations, child)
+        try:
+            records_container = create_aggregation_for_folder(aggregations, child)
+        except KeyError:
+            logging.error("Skipping folder due to missing classification: %s", child)
+            continue
 
         for item in sorted(child.iterdir()):
             if item.is_dir():

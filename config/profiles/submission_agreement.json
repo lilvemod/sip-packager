@@ -1,0 +1,17 @@
+{
+    "archivist": "Kommunstyrelsen",
+    "archivist_org": "Local/556014-4106/Kommunstyrelsen",
+    "system": "OneDrive",
+    "system_note": "Version number",
+    "preservation": "Kommunarkivet",
+    "creator_organization": "Kommunledningskontoret",
+    "creator_individual ": "Test Testsson",
+    "creator_individual_contact": "test.testsson@kommunen.se",
+    "sip_creator": "sip-packager",
+    "sip_creator_note": "1.0-beta",
+    "profile": "https://earkcsip.dilcis.eu/profile/E-ARK-CSIP.xml/",
+    "label": "Label",
+    "other_type": "citserms_v2_1",
+    "submission_agreement": "Diarienummer",
+    "recordstatus": "supplement"
+}

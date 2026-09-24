@@ -4,16 +4,18 @@ Generate a CITS-ERMS 2.1.0 XML-file from a KLASSA 2.1-based folder structure.
 
 import argparse
 import datetime
-import logging
 import json
+import logging
 import sys
-from pathlib import Path
-from lxml import etree
 import uuid
+from lxml import etree
+from numpy import record
+from pathlib import Path
 
 # Links for included namespaces
 NS_ERMS = "https://DILCIS.eu/XML/ERMS"
 NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
+NS_SCHEMATRON = "http://purl.oclc.org/dsdl/schematron"
 
 # Namespace dict with explicit prefix
 NSMAP = {
@@ -22,10 +24,16 @@ NSMAP = {
 }
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-KLASSA_PROCESSES_PATH = BASE_DIR / "config" / "klassa_processer.json"
 
+# Path to the config file with data regarding KLASSA processes. Used to dynamically set certain metadata.
+KLASSA_PROCESSES_PATH = BASE_DIR / "config" / "klassa_processer.json"
 with KLASSA_PROCESSES_PATH.open("r", encoding="utf-8") as f:
     KLASSA = json.load(f)
+
+# Path to the config file with data regarding the submission. Used to dynamically set certain metadata.
+SUBMISSION_AGREEMENT_PATH = BASE_DIR / "config" / "profiles" / "submission_agreement.json"
+with SUBMISSION_AGREEMENT_PATH.open("r", encoding="utf-8") as f:
+    SUBMISSION_AGREEMENT = json.load(f)
 
 
 def setup_logging(verbose: bool) -> None:
@@ -41,62 +49,129 @@ def validate_root_path(root: Path) -> None:
 
 
 def create_root_erms_element() -> etree.Element:
-    # Root element <erms:erms>
+    """
+    Adds the root element <erms> and xml-declaration and schematron-declaration.
+    """
+
+    logging.info("Starting the creation of cits-erms.xml")
+
     erms = etree.Element(etree.QName(NS_ERMS, "erms"), nsmap=NSMAP)
 
-    # Add schemaLocation
+
     erms.set(
         etree.QName(NS_XSI, "schemaLocation"),
-        f"{NS_ERMS} ERMS.xsd"
+        f"{NS_ERMS} ../schemas/ERMS.xsd"
     )
 
-    control = etree.SubElement(erms, etree.QName(NS_ERMS, "control"))
+    processing_instruction = etree.ProcessingInstruction(
+    "xml-model",
+    f'href="../schemas/erms.sch" type="application/xml" schematypens="{NS_SCHEMATRON}"'
+    )
 
+    erms.addprevious(processing_instruction)
+
+    logging.debug("Created root <erms> element with namespaces and schema locations.")
+    return erms
+
+def create_control_element(erms_root: etree.Element) -> etree.Element:
+    """
+    Creates the control element using a minimal profile of required metadata to validate against the CITS-ERMS schema.
+    """
+
+    control = etree.SubElement(erms_root, etree.QName(NS_ERMS, "control"))
+    
     identification = etree.SubElement(control, etree.QName(NS_ERMS, "identification"))
-    identification.text = "KLASSA-ERMS-export"
+    identification.set("identificationType", "UUID")
+    identification.text = str(uuid.uuid4())
 
     information_class = etree.SubElement(control, etree.QName(NS_ERMS, "informationClass"))
-    information_class.text = "ERMS export"
+    information_class.text = SUBMISSION_AGREEMENT.get("information_class", "")
 
-    return erms
+    # Classificationschema should be adapted to local schemas when necessary and more <p> elements can be added to signal which specifici retention plan is used for the information included in the delivery.
+    classificationSchema = etree.SubElement(control, etree.QName(NS_ERMS, "classificationSchema"))
+    textualdescription = etree.SubElement(classificationSchema, etree.QName(NS_ERMS, "textualDescriptionOfClassificationSchema"))
+    textualdescription_p = etree.SubElement(textualdescription, etree.QName(NS_ERMS, "p"))
+    textualdescription_p.text = SUBMISSION_AGREEMENT.get("classification_schema", "")
+
+    maintenanceInformation = etree.SubElement(control, etree.QName(NS_ERMS, "maintenanceInformation"))
+    maintenanceStatus = etree.SubElement(maintenanceInformation, etree.QName(NS_ERMS, "maintenanceStatus"))
+    maintenanceStatus.set("value", "new")
+
+    maintenanceAgency = etree.SubElement(maintenanceInformation, etree.QName(NS_ERMS, "maintenanceAgency"))
+    agencyName = etree.SubElement(maintenanceAgency, etree.QName(NS_ERMS, "agencyName"))
+    agencyName.text = SUBMISSION_AGREEMENT.get("creator_organization", "")
+    
+
+    maintenanceHistory = etree.SubElement(maintenanceInformation, etree.QName(NS_ERMS, "maintenanceHistory"))
+    maintenanceEvent = etree.SubElement(maintenanceHistory, etree.QName(NS_ERMS, "maintenanceEvent"))
+    maintenanceEventType = etree.SubElement(maintenanceEvent, etree.QName(NS_ERMS, "eventType"))
+    maintenanceEventType.set("value", "created")
+    eventDateTime = etree.SubElement(maintenanceEvent, etree.QName(NS_ERMS, "eventDateTime"))
+    eventDateTime.text = datetime.datetime.now().replace(microsecond=0).isoformat(timespec="seconds")
+
+    maintenanceAgent = etree.SubElement(maintenanceEvent, etree.QName(NS_ERMS, "agent"))
+    maintenanceAgent.set("agentType", "creator")
+    maintenanceAgentName = etree.SubElement(maintenanceAgent, etree.QName(NS_ERMS, "name"))
+    maintenanceAgentName.text = SUBMISSION_AGREEMENT.get("creator_individual", "")
+
+    logging.debug("Created <control> element and children.")
+    return control
 
 
 def add_aggregations_container(erms_root: etree.Element) -> etree.Element:
+    """
+    Adds the <erms:aggregations> container to the root <erms:erms> element.
+    """
+    logging.debug("Created <aggregations> element.")
     return etree.SubElement(erms_root, etree.QName(NS_ERMS, "aggregations"))
 
 
 def create_aggregation_for_folder(parent: etree.Element, folder: Path) -> etree.Element:
+    """
+    Creates an aggregation element for each folder under the given path. Uses a minimal profile of required metadata to validate against the CITS-ERMS schema.
+    """
     aggregation = etree.SubElement(parent, etree.QName(NS_ERMS, "aggregation"))
 
     aggregation.set("systemIdentifier", str(uuid.uuid4()))
 
-    aggregation.set("aggregationType", "Class")
+    aggregation.set("aggregationType", "class")
 
-    object_id = etree.SubElement(aggregation, etree.QName(NS_ERMS, "objectID"))
+    object_id = etree.SubElement(aggregation, etree.QName(NS_ERMS, "objectId"))
     object_id.text = folder.name
 
+    # Currently takes input value from submission agreement but should realistically be based on the classification of the information for the specific process, not the package as a whole.
     information_class = etree.SubElement(aggregation, etree.QName(NS_ERMS, "informationClass"))
-    information_class.text = "1"
-
-    if folder.name not in KLASSA:
-        raise KeyError(f"Classification not found in json: {folder.name}")
-
-    title = etree.SubElement(aggregation, etree.QName(NS_ERMS, "title"))
-
-    # Dynamic attribution of title text based on KLASSA mapping
-    title.text = KLASSA.get(folder.name, folder.name)
+    information_class.text = SUBMISSION_AGREEMENT.get("information_class", "")
 
     classification = etree.SubElement(aggregation, etree.QName(NS_ERMS, "classification"))
     classification.text = folder.name
 
-    records = etree.SubElement(aggregation, etree.QName(NS_ERMS, "records"))
-    return records
+    if folder.name not in KLASSA:
+        raise KeyError(f"Classification not found in json: {folder.name}")
+
+    # Dynamic attribution of title text as name of process based on KLASSA mapping
+    title = etree.SubElement(aggregation, etree.QName(NS_ERMS, "title"))
+    title.text = KLASSA.get(folder.name, folder.name)
+
+    logging.debug("Created <aggregation> element for folder: %s", folder)
+    return aggregation
 
 
 def create_record_for_file(records_container: etree.Element, file_path: Path, output_path: Path) -> None:
+    """
+    Creates a record element for each file directly under the aggregation folder. Uses a minimal profile of required metadata to validate against the CITS-ERMS schema.
+    """
     record = etree.SubElement(records_container, etree.QName(NS_ERMS, "record"))
-
     record.set("systemIdentifier", str(uuid.uuid4()))
+
+    object_id = etree.SubElement(record, etree.QName(NS_ERMS, "objectId"))
+    object_id.text = str(uuid.uuid4())
+
+    classification = etree.SubElement(record, etree.QName(NS_ERMS, "classification"))
+    classification.text = file_path.parent.name + " " + KLASSA.get(file_path.parent.name, file_path.parent.name)
+
+    title = etree.SubElement(record, etree.QName(NS_ERMS, "title"))
+    title.text = str(file_path.name)
 
     dates = etree.SubElement(record, etree.QName(NS_ERMS, "dates"))
     date = etree.SubElement(dates, etree.QName(NS_ERMS, "date"))
@@ -104,29 +179,19 @@ def create_record_for_file(records_container: etree.Element, file_path: Path, ou
     created_ts = file_path.stat().st_ctime
     date.text = datetime.datetime.fromtimestamp(created_ts).replace(microsecond=0).isoformat(timespec="seconds")
 
-    object_id = etree.SubElement(record, etree.QName(NS_ERMS, "objectID"))
-    object_id.text = file_path.name
-
-    title = etree.SubElement(record, etree.QName(NS_ERMS, "title"))
-    title.text = str(file_path.name)
-
     additionalInformation = etree.SubElement(record, etree.QName(NS_ERMS, "additionalInformation"))
     appendix = etree.SubElement(additionalInformation, etree.QName(NS_ERMS, "appendix"))
+    appendix.set ("name", file_path.name)
     relative = file_path.relative_to(output_path.parent)
-    appendix.set("Path", str(relative))
+    appendix.set("path", str(relative))
+
+    logging.debug("Created <record> element for file: %s", file_path)
 
 def build_erms_from_folder_structure(root_path: Path, output_path: Path) -> etree.ElementTree:
 
     validate_root_path(root_path)
-
     erms_root = create_root_erms_element()
-    processing_instruction = etree.ProcessingInstruction(
-    "xml-model",
-    'href="erms.sch" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"'
-    )
-
-    erms_root.addprevious(processing_instruction)
-
+    create_control_element(erms_root)
     aggregations = add_aggregations_container(erms_root)
 
     for child in sorted(root_path.iterdir()):
@@ -134,7 +199,7 @@ def build_erms_from_folder_structure(root_path: Path, output_path: Path) -> etre
             logging.debug("Ignoring non-directory at root: %s", child)
             continue
 
-        logging.info("Processing folder as aggregation: %s", child)
+        logging.debug("Processing folder as aggregation: %s", child)
         try:
             records_container = create_aggregation_for_folder(aggregations, child)
         except KeyError:
@@ -146,7 +211,7 @@ def build_erms_from_folder_structure(root_path: Path, output_path: Path) -> etre
                 logging.warning("Ignoring nested directory inside %s: %s", child, item)
                 continue
 
-            logging.info("Adding file as record: %s", item)
+            logging.debug("Adding file as record: %s", item)
             create_record_for_file(records_container, item, output_path)
 
 
@@ -160,7 +225,7 @@ def write_xml(tree: etree.ElementTree, output_path: Path) -> None:
     if output_path.parent and not output_path.parent.exists():
         raise FileNotFoundError(f"Output directory does not exist: {output_path.parent}")
 
-    logging.info("Writing XML to: %s", output_path)
+    logging.debug("Writing XML to: %s", output_path)
 
     root = tree.getroot()
 
@@ -186,6 +251,8 @@ def parse_args(argv=None):
 
 
 def main(argv=None) -> int:
+    start_time = datetime.datetime.now()
+
     args = parse_args(argv)
     setup_logging(args.verbose)
 
@@ -196,7 +263,10 @@ def main(argv=None) -> int:
         tree = build_erms_from_folder_structure(root_path, output_path)
         write_xml(tree, output_path)
 
-        logging.info("Done.")
+        end_time = datetime.datetime.now()
+        elapsed_time = end_time - start_time
+
+        logging.info(f"Done. The program {Path(__file__).name}  took: {elapsed_time.total_seconds():2f} seconds to run")
         return 0
     except Exception as exc:
         logging.error("Failed to generate ERMS XML: %s", exc, exc_info=args.verbose)

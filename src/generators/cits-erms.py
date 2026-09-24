@@ -50,7 +50,6 @@ def create_root_erms_element() -> etree.Element:
         f"{NS_ERMS} ERMS.xsd"
     )
 
-    # <erms:control>
     control = etree.SubElement(erms, etree.QName(NS_ERMS, "control"))
 
     identification = etree.SubElement(control, etree.QName(NS_ERMS, "identification"))
@@ -83,7 +82,8 @@ def create_aggregation_for_folder(parent: etree.Element, folder: Path) -> etree.
         raise KeyError(f"Classification not found in json: {folder.name}")
 
     title = etree.SubElement(aggregation, etree.QName(NS_ERMS, "title"))
-    # Change so that the value of title is dynamic and based on the classification of the folder name
+
+    # Dynamic attribution of title text based on KLASSA mapping
     title.text = KLASSA.get(folder.name, folder.name)
 
     classification = etree.SubElement(aggregation, etree.QName(NS_ERMS, "classification"))

@@ -7,7 +7,7 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 # Change filename if needed
-FILE_TO_READ = "Verktyg1.xlsx"
+FILE_TO_READ = "Verktyg3.xlsx"
 KLASSA_SOURCE_PATH = BASE_DIR / "config" / FILE_TO_READ
 
 
@@ -22,16 +22,18 @@ def main():
         a = row[0]
         b = row[1]
         c = row[2]
-        process = row[4]
+        process = row[3]
 
-        # Skip rows where C is NaN
-        if pd.isna(c):
+        if not isinstance(process, str) or not process.strip():
             continue
 
-        key = f"{int(a)}.{int(b)}.{int(c)}"
-
-        if isinstance(process, str) and process.strip():
-            result[key] = process.strip()
+        # Handler for cases where the third column is empty
+        if pd.isna(c):
+            key= f"{int(a)}.{int(b)}"
+        else:
+            key = f"{int(a)}.{int(b)}.{int(c)}"
+        
+        result[key] = process.strip()
 
 
     OUTPUT_JSON_PATH = BASE_DIR / "config" / "klassa_processer.json"

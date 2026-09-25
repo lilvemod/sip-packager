@@ -11,9 +11,9 @@
     "sip_creator": "sip-packager",
     "sip_creator_note": "1.0-beta",
     "profile": "https://earkcsip.dilcis.eu/profile/E-ARK-CSIP.xml/",
-    "label": "Label",
+    "label": "F1:1 - Exempeltext för etikett",
     "other_type": "citserms_v2_1",
     "submission_agreement": "Diarienummer",
-    "recordstatus": "supplement",
+    "recordstatus": "SUPPLEMENT",
     "information_class": "Klass 0"
 }

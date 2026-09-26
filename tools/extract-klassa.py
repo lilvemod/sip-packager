@@ -9,7 +9,7 @@ import sys
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_FILE_TO_READ = "Verktyg1.xlsx"
+DEFAULT_FILE_TO_READ = "Klassa2-1.xlsx"
 
 # The file to read can be specified as a command line argument, otherwise the default file will be used.
 FILE_TO_READ = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_FILE_TO_READ

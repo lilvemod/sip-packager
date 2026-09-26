@@ -1,10 +1,8 @@
 """
-Generate a METS file according to the CSIP profile.
+Generate a METS file with minimum requirements according to the CSIP profile.
 """
 
-import argparse
 import datetime
-import json
 import sys
 import logging
 import hashlib
@@ -12,6 +10,15 @@ import mimetypes
 import uuid
 from lxml import etree
 from pathlib import Path
+from src.common.utils import (
+    parse_args,
+    setup_logging,
+    determine_project_root,
+    validate_root_path,
+    load_run_config,
+    load_submission_agreement,
+    write_xml
+)
 
 # Links for included namespaces
 NS_METS = "http://www.loc.gov/METS/"
@@ -27,56 +34,6 @@ NSMAP = {
     "csip": NS_CSIP
 }
 
-def parse_args(argv=None):
-    parser = argparse.ArgumentParser(
-        description="Generate METS XML according to the CSIP profile."
-    )
-    parser.add_argument("root", type=str, help="Root folder of the SIP.")
-    parser.add_argument("-o", "--output", type=str, required=True, help="Output METS XML file.")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logging.")
-    return parser.parse_args(argv)
-
-def setup_logging(verbose: bool) -> None:
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s")
-
-
-def determine_project_root() -> Path:
-    """
-    Handles the finding of files that are included in sip-packager and that are called by the program as input
-    """
-    root = Path(__file__).resolve().parents[2]
-    if not (root / "config").exists():
-        root = Path(__file__).resolve().parents[1]
-    return root
-
-
-def load_and_validate_config(project_root: Path):
-    """
-    Loads in the the config file with data regarding the submission
-    """
-    
-    submission_path = project_root / "config" / "profiles" / "submission_agreement.json"
-
-    if not submission_path.exists():
-            raise FileNotFoundError(f"Submission agreement file does not exist: {submission_path}")
-    try:
-        with submission_path.open("r", encoding="utf-8") as f:
-            submission = json.load(f)
-    except Exception as e:
-        raise ValueError(f"File could not be read: {e}")
-
-    return submission
-
-
-def validate_sip_root_path(root: Path) -> None:
-    """
-    Check if the input path exists, and if it is a directory. Otherwise terminate the program
-    """
-    if not root.exists():
-        raise FileNotFoundError(f"Root path does not exist: {root}")
-    if not root.is_dir():
-        raise NotADirectoryError(f"Root path is not a directory: {root}")
 
 def create_root_mets_element(submission) -> etree.Element:
     """
@@ -96,7 +53,6 @@ def create_root_mets_element(submission) -> etree.Element:
         etree.QName(NS_XSI, "schemaLocation"),
         f"{NS_METS} schemas/mets.xsd {NS_XLINK} schemas/xlink.xsd {NS_CSIP} schemas/DILCISExtensionMETS.xsd"
     )
-
 
     logging.debug("Created root <erms> element with namespaces, schema locations and other mandatory attributes.")
     return mets
@@ -309,7 +265,7 @@ def build_mets_from_folder_structure(sip_root, submission):
     """
     Calls each function that creates a section of the mets.xml-file.
     """
-    validate_sip_root_path(sip_root)
+    validate_root_path(sip_root)
     mets_root = create_root_mets_element(submission)
     create_metsHdr_element(mets_root, submission)
     fileSec = add_filesec_section(mets_root)
@@ -321,8 +277,6 @@ def build_mets_from_folder_structure(sip_root, submission):
         folder_name = fileGrp.get("USE").lower()
         fileGrp_id = fileGrp.get("ID")
         folder_to_fileGrpID[folder_name] = fileGrp_id
-
-        
         folder_path = sip_root / folder_name
         add_files_to_fileGrp(fileGrp, folder_path=folder_path, sip_root=sip_root)
 
@@ -331,41 +285,25 @@ def build_mets_from_folder_structure(sip_root, submission):
     return etree.ElementTree(mets_root)
 
 
-def write_xml(tree: etree.ElementTree, output_path: Path) -> None:
-    if output_path.exists() and output_path.is_dir():
-        raise IsADirectoryError(f"Output path is a directory: {output_path}")
-
-    if output_path.parent and not output_path.parent.exists():
-        raise FileNotFoundError(f"Output directory does not exist: {output_path.parent}")
-
-    logging.info("Writing METS XML to: %s", output_path)
-
-    pretty_xml = etree.tostring(
-        tree,
-        pretty_print=True,
-        xml_declaration=True,
-        encoding="utf-8"
-    )
-
-    with output_path.open("wb") as f:
-        f.write(pretty_xml)
-
-
 def main(argv=None) -> int:
     args = parse_args(argv)
     setup_logging(args.verbose)
-
-    # Checks that all files required to run the program are where they're supposed to be and can be loaded
-    project_root = determine_project_root()
-    submission = load_and_validate_config(project_root)
 
     # Starts the clock for runtime after all initial checks have been cleared
     start_time = datetime.datetime.now()
 
     try:
-        sip_root = Path(args.root)
+        project_root = determine_project_root()
+        run_config = load_run_config(project_root)
+        submission = load_submission_agreement(project_root)
 
-        output_path = Path(args.output)
+        # Uses the config path if there are no command-line arguments
+        # Path to which folders, subfolders and files the program should go through.
+        sip_root = Path(args.root) if args.root else Path(run_config["sip_root"])
+
+        # The path MUST always be this for the CSIP structure
+        # Path for where to save the XML-file that the program produces.
+        output_path = Path(args.output) if args.output else sip_root / "mets.xml"
 
         # Build the xml-structure
         tree = build_mets_from_folder_structure(

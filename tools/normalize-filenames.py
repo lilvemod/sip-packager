@@ -3,6 +3,7 @@ Normalize filenames to comply with FGS package standards.
 """
 
 import os
+import json
 import sys
 import logging
 from pathlib import Path
@@ -10,11 +11,37 @@ from pathlib import Path
 # Allowed characters according to FGS
 ALLOWED_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
 
-# Mapping of disallowed characters to replacements
+# Simply replaces common diacritic characters in the swedish language with its most basic counterpart
 REPLACE_MAP = {
     "å": "a", "ä": "a", "ö": "o",
     "Å": "A", "Ä": "A", "Ö": "O"
 }
+
+def determine_project_root() -> Path:
+    """
+    Determine the project root by checking where the config folder exists.
+    """
+    root = Path(__file__).resolve().parents[2]
+    if not (root / "config").exists():
+        root = Path(__file__).resolve().parents[1]
+    return root
+
+
+def load_run_config(project_root: Path) -> dict:
+    """
+    Load run_config.json from the project config folder.
+    """
+    config_path = project_root / "config" / "run_config.json"
+
+    if not config_path.exists():
+        raise FileNotFoundError(f"run_config.json is missing: {config_path}")
+
+    try:
+        with config_path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as exc:
+        raise ValueError(f"Could not read run_config.json: {exc}")
+
 
 
 def setup_logging(verbose: bool) -> None:
@@ -38,7 +65,9 @@ def sanitize_filename(filename: str) -> str:
 
 
 def ensure_unique_path(folder: Path, filename: str) -> str:
-    """Ensure the filename is unique inside the folder."""
+    """
+    Ensure the filename is unique inside the folder.
+    """
     base, ext = os.path.splitext(filename)
     counter = 1
     new_name = filename
@@ -51,7 +80,9 @@ def ensure_unique_path(folder: Path, filename: str) -> str:
 
 
 def normalize_filenames(root_path: Path) -> int:
-    """Normalize filenames under the given root path. Returns number of changed files."""
+    """
+    Normalize filenames under the given root path. Returns number of changed files.
+    """
     if not root_path.exists():
         raise FileNotFoundError(f"Root path does not exist: {root_path}")
 
@@ -93,13 +124,30 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         description="Normalize filenames according to FGS allowed characters."
     )
-    parser.add_argument("root", type=str, help="Root folder to scan.")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logging.")
+    parser.add_argument(
+        "--root",
+        type=str,
+        help="Root folder to run on. If no cli, the sip_root is determined by run_config.json."
+        )
+    
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Verbose logging."
+        )
     args = parser.parse_args(argv)
 
     setup_logging(args.verbose)
 
-    root_path = Path(args.root)
+    try:
+        project_root = determine_project_root()
+        config = load_run_config(project_root)
+    except Exception as exc:
+        logging.error(f"Failed to load run_config.json: {exc}")
+        return 1
+
+    root_path = Path(args.root) if args.root else Path(config["sip_root"])
 
     try:
         changed = normalize_filenames(root_path)

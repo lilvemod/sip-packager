@@ -62,11 +62,13 @@ To run the program successfully, it requires that you can provide a folder struc
 ### external libraries
 Besides needing python, the project also requires you to install some external libraries.
 
-* lxml
-to install, run `pip install lxml`
+#### lxml
 
-* pandas
-to install, run `pip install pandas`
+to install, run<br> `pip install lxml`
+
+#### pandas
+
+to install, run<br> `pip install pandas`
 
 ### run_config.json
 In the subfolder /config there is a configuration file called "run_config.json". It holds three key-value pairs that are part of the setup of the program.

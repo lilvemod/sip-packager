@@ -1,7 +1,7 @@
 # sip-packager
 
 ## Description:
-The program produces a minimum profile CSIP package that can be delivered to an e-archive system if it adheres to the E-ARK specifications **CSIP v.2.1.0**, **SIP v.2.1.0** and **CITS-ERMS v.2.10**. 
+The program produces a minimum profile CSIP package that can be delivered to an e-archive system if it adheres to the E-ARK specifications **CSIP v.2.1.0**, **SIP v.2.1.0** and **CITS-ERMS v.2.10**.
 
 The specifications include a folder structure within a ZIP-file along with at least two metadatafiles, mets.xml and erms.xml that describe the delivery of the SIP and its representations with metadata from the **KLASSA 2.1** classification schema for records management in the public sector.
 
@@ -41,7 +41,7 @@ when in the project root, `..\sip-packager` and the programs will be run in the 
 #### To run each program as standalone:
 All core generator programs (csip_structure, cits_erms, mets, package_to_zip) and the tool (normalize_filenames) can also be ran as standalone and breaking with the default paths given in run_config.json. Note however that they require the CSIP folder structure (as argument for --root) in order to be ran properly.
 
-They all take the first command-line argument, `--root`, as a replacement for "sip_root". 
+They all take the first command-line argument, `--root`, as a replacement for "sip_root".
 
 They all take the command-line argument, `-o` or `--output` as a replacement for "erms_input".
 
@@ -62,10 +62,16 @@ To run the program successfully, it requires that you can provide a folder struc
 ### external libraries
 Besides needing python, the project also requires you to install some external libraries.
 
+* lxml
+to install, run `pip install lxml`
+
+* pandas
+to install, run `pip install pandas`
+
 ### run_config.json
 In the subfolder /config there is a configuration file called "run_config.json". It holds three key-value pairs that are part of the setup of the program.
 
-* The first pair gives a path to where you want the SIP package to be created. 
+* The first pair gives a path to where you want the SIP package to be created.
 
 * The second pair gives the path to the root folder of your input.
 
@@ -92,9 +98,9 @@ This program is run as an option, but could be used as a standalone tool for cha
 The program replaces whitespace with "_" and äÄ with aA, åÅ with aA and öÖ with oO.
 
 ### extract_klassa.py
-This program is only used as a standalone tool. It can be used wholly outside of the scope of this project as well, and the main impetus for making the program is that there is a real lack of publically available, machine readable data regarding the classification of information in the public sector in sweden. 
+This program is only used as a standalone tool. It can be used wholly outside of the scope of this project as well, and the main impetus for making the program is that there is a real lack of publically available, machine readable data regarding the classification of information in the public sector in sweden.
 
-Most regional or municipal agencies uses some variant of either KLASSA (made public through SKR) or VerkSAM (developed by Sydarkivera). This program just uses the basic KLASSA 2.1 as default, but most public agencies have made at least some local changed to that classification schema. 
+Most regional or municipal agencies uses some variant of either KLASSA (made public through SKR) or VerkSAM (developed by Sydarkivera). This program just uses the basic KLASSA 2.1 as default, but most public agencies have made at least some local changed to that classification schema.
 
 This program allows you to easily produce a json-file that is adapted to your local classifications so long as you can provide a cleaned up XLSX-file that is structured like the file "Klassa_2_1.xlsx" found in the subfolder /config.
 

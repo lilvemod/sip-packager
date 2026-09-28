@@ -39,6 +39,9 @@ def rename_existing_sip_folder(sip_root: Path) -> None:
     if not sip_root.exists():
         return
 
+    # Since none of the programs ever remove any files or directories, the SIP root folder still exists after run_sip_packager has been run.
+    # In case the user forgets to clear out the SIP folder before running the program again, the previous SIP root folder gets renamed so that the two don't get their contents mixed up.
+
     base = sip_root.parent
     old_name = "SIP_OLD"
     candidate = base / old_name
@@ -59,6 +62,7 @@ def create_csip_structure(sip_root: Path) -> None:
     """
     logging.debug(f"Creating CSIP structure at: {sip_root}")
 
+    # These are the baseline subfolders in CSIP. If there is a need to expand, do so here.
     (sip_root / "metadata").mkdir(parents=True, exist_ok=True)
     (sip_root / "documentation").mkdir(parents=True, exist_ok=True)
     (sip_root / "schemas").mkdir(parents=True, exist_ok=True)
@@ -69,6 +73,9 @@ def copy_schemas(project_root: Path, sip_root: Path) -> None:
     """
     Copy all schemas from src/schemas to SIP/schemas.
     """
+
+    # All schemas exist within the project to make sure that the correct versions are being used when running the program.
+    # Note that METS 1.12 makes use of an older version of XLINK that is not always the first one found when searching for the schema.
     source = project_root / "src" / "schemas"
     target = sip_root / "schemas"
 
@@ -86,6 +93,8 @@ def copy_erms_input(erms_input: Path, sip_root: Path) -> None:
     Copy ERMS input folders (e.g. 1.1.1, 2.3.4) into SIP/representations/rep_001.
     """
     validate_root_path(erms_input)
+
+    # Note that this implementation only ever makes use of one representation, but that this rep in turn can contain subfolders.
 
     target = sip_root / "representations" / "rep_001"
 

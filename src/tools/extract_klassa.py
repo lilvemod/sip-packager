@@ -1,103 +1,143 @@
-""" 
-Tool for extracting adjusted classification data from an Excel file and saving it as key-value pairs in a JSON-file that is then read by cits-erms.py to create the title element in the ERMS XML.
 """
+Tool for extracting adjusted classification data from an Excel file and saving it
+as key-value pairs in a JSON file that is then read by cits-erms.py.
+"""
+
+import datetime
 import json
 import logging
+import sys
 from pathlib import Path
 import pandas as pd
-import sys
 
-
-BASE_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_FILE_TO_READ = "Klassa_2_1.xlsx"
-
-# The file to read can be specified as a command line argument, otherwise the default file will be used.
-FILE_TO_READ = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_FILE_TO_READ
-KLASSA_SOURCE_PATH = BASE_DIR / "config" / FILE_TO_READ
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
+from src.common.utils import (
+    parse_args,
+    setup_logging,
+    determine_project_root,
 )
 
-logger = logging.getLogger(__name__)
+
+DEFAULT_FILE_TO_READ = "Klassa_2_1.xlsx"
+DEFAULT_CANDIDATE_FILENAME = "klassa_processer_OLD"
+
 
 def validate_excel_file(path: Path) -> pd.DataFrame:
-    """Validate that the file exists, is an Excel file, can be read, and has enough columns."""
+    """
+    Validate that the file exists, is an Excel file, can be read, and has enough columns.
+    The input must follow the structure and data types of the example XSLSX file found under config/
+    """
 
-    # 1. File exists
     if not path.exists():
-        logger.error(f"File '{path.name}' was not found in config/.")
-        sys.exit(1)
+        logging.error(f"File '{path.name}' was not found in config/.")
+        raise FileNotFoundError(path)
 
-    # 2. Check if file has the correct extension
     if path.suffix.lower() not in [".xlsx", ".xls"]:
-        logger.error(f"File '{path.name}' is not an Excel file (.xlsx or .xls).")
-        sys.exit(1)
+        logging.error(f"File '{path.name}' is not an Excel file (.xlsx or .xls).")
+        raise ValueError("Invalid extension")
 
-    # 3. Try reading the file
     try:
-        klassa_input = pd.read_excel(path, header=None)
+        df = pd.read_excel(path, header=None)
     except Exception as e:
-        logger.error(f"File '{path.name}' could not be read as an Excel file.")
-        logger.error(f"Details: {e}")
-        sys.exit(1)
+        logging.error(f"File '{path.name}' could not be read as an Excel file.")
+        logging.error(f"Details: {e}")
+        raise
 
-    # 4. Check minimum number of columns
-    if klassa_input.shape[1] < 4:
-        logger.error(
-            f"Excel file must have at least 4 columns, but it has {klassa_input.shape[1]}."
+    if df.shape[1] < 4:
+        raise ValueError(
+            f"Excel file must have at least 4 columns, but it has {df.shape[1]}."
         )
-        sys.exit(1)
 
-    logger.info(f"Excel file '{path.name}' validated successfully.")
-    return klassa_input
+    logging.info(f"Excel file '{path.name}' validated successfully.")
+    return df
 
-def main():
-    klassa_input = validate_excel_file(KLASSA_SOURCE_PATH)
 
+def transform_df_to_mapping(rows) -> dict:
+    """
+    Transform the data frame into key-value pairs.
+    """
     result = {}
 
-    # Requires the input to be formatted as the examples found in config.
-    # Takes the first three columns that together make up the classification as key, then takes the fourth row (D) with its process as corresponding value.
-    for _, row in klassa_input.iterrows():
-        a = row[0]
-        b = row[1]
-        c = row[2]
-        process = row[3]
+    for _, row in rows:
+        a, b, c, process = row[0], row[1], row[2], row[3]
 
         if not isinstance(process, str) or not process.strip():
             continue
 
-        # Handler for cases where the third column is empty
         if pd.isna(c):
-            key= f"{int(a)}.{int(b)}"
+            key = f"{int(a)}.{int(b)}"
         else:
             key = f"{int(a)}.{int(b)}.{int(c)}"
-        
+
         result[key] = process.strip()
 
+    return result
 
-    OUTPUT_JSON_PATH = BASE_DIR / "config" / "klassa_processer.json"
-    OLD_JSON_PATH = BASE_DIR / "config" / "klassa_processer_OLD"
 
-    # Handles the output of a new json config file, and if an old one exists, rename it to klassa_processer_OLD.json
-    if OUTPUT_JSON_PATH.exists():
+def backup_old_json(output_path: Path):
+    """
+    Prevent file collision if there already is a klassa_processer.json file in the config folder.
+    """
+    if output_path.exists():
+        base = output_path.parent / DEFAULT_CANDIDATE_FILENAME
+        candidate = base.with_suffix(".json")
         counter = 0
-        candidate = OLD_JSON_PATH.with_suffix(".json")
 
         while candidate.exists():
             counter += 1
-            candidate = BASE_DIR / "config" / f"klassa_processer_OLD_{counter}.json"
+            candidate = output_path.parent / f"{DEFAULT_CANDIDATE_FILENAME}_{counter}.json"
 
-        OUTPUT_JSON_PATH.rename(candidate)
+        output_path.rename(candidate)
+        logging.info(f"Existing JSON backed up as: {candidate}")
 
-    with OUTPUT_JSON_PATH.open("w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False, indent=4)
 
-    print(f"JSON-file created: {OUTPUT_JSON_PATH}")
+def write_output_json(mapping: dict, output_path: Path):
+    """
+    Write the mapped data to key-value pairs in a json-file.
+    """
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(mapping, f, ensure_ascii=False, indent=4)
+
+    logging.info(f"JSON-file created: {output_path}")
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    setup_logging(args.verbose)
+
+    start_time = datetime.datetime.now()
+
+    try:
+        project_root = determine_project_root()
+        config_dir = project_root / "config"
+
+        # Determine input file
+        file_to_read = args.root if args.root else DEFAULT_FILE_TO_READ
+        excel_path = config_dir / file_to_read
+
+        # Read the data from the excel file
+        df = validate_excel_file(excel_path)
+
+        # Transform to a mapping
+        mapping = transform_df_to_mapping(df.iterrows())
+
+        # Set where the output should be saved and handle possible file collisions when the file is saved
+        output_path = config_dir / "klassa_processer.json"
+        backup_old_json(output_path)
+
+        # Takes the transformed mapping, converts it into key-value pairs that are saved in a JSON file at the appointed path
+        write_output_json(mapping, output_path)
+
+        # Stops the clock for runtime
+        elapsed = datetime.datetime.now() - start_time
+
+        logging.info(
+            f"Done. The program {Path(__file__).name} took {elapsed.total_seconds():.2f} seconds to run"
+        )
+        return 0
+
+    except Exception as exc:
+        logging.error("Failed to generate JSON: %s", exc, exc_info=args.verbose)
+        return 1
 
 if __name__ == "__main__":
-    main()
-
-
+    sys.exit(main())

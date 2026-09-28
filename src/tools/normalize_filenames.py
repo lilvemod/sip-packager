@@ -2,11 +2,15 @@
 Normalize filenames to comply with FGS package standards.
 """
 
-import os
-import json
 import sys
 import logging
 from pathlib import Path
+from src.common.utils import (
+    parse_args,
+    setup_logging,
+    determine_project_root,
+    load_run_config,
+)
 
 # Allowed characters according to FGS
 ALLOWED_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
@@ -16,41 +20,6 @@ REPLACE_MAP = {
     "å": "a", "ä": "a", "ö": "o",
     "Å": "A", "Ä": "A", "Ö": "O"
 }
-
-def determine_project_root() -> Path:
-    """
-    Determine the project root by checking where the config folder exists.
-    """
-    root = Path(__file__).resolve().parents[2]
-    if not (root / "config").exists():
-        root = Path(__file__).resolve().parents[1]
-    return root
-
-
-def load_run_config(project_root: Path) -> dict:
-    """
-    Load run_config.json from the project config folder.
-    """
-    config_path = project_root / "config" / "run_config.json"
-
-    if not config_path.exists():
-        raise FileNotFoundError(f"run_config.json is missing: {config_path}")
-
-    try:
-        with config_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as exc:
-        raise ValueError(f"Could not read run_config.json: {exc}")
-
-
-
-def setup_logging(verbose: bool) -> None:
-    """Configure logging output."""
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s [%(levelname)s] %(message)s"
-    )
 
 
 def sanitize_filename(filename: str) -> str:
@@ -68,10 +37,16 @@ def ensure_unique_path(folder: Path, filename: str) -> str:
     """
     Ensure the filename is unique inside the folder.
     """
-    base, ext = os.path.splitext(filename)
+    # The split is done so that counter can be added in between the stem and the extension
+    p = Path(filename)
+    base = p.stem
+    ext = p.suffix
+
     counter = 1
     new_name = filename
 
+    # Handles file name collisions. For example a file ää.txt and åå.txt would after normalization be aa.txt.
+    # This adds a _x suffix each time. So instead of one aa.txt file, the program produces aa.txt and aa_1.txt based on the previous example.
     while (folder / new_name).exists():
         new_name = f"{base}_{counter}{ext}"
         counter += 1
@@ -83,29 +58,24 @@ def normalize_filenames(root_path: Path) -> int:
     """
     Normalize filenames under the given root path. Returns number of changed files.
     """
-    if not root_path.exists():
-        raise FileNotFoundError(f"Root path does not exist: {root_path}")
 
-    if not root_path.is_dir():
-        raise NotADirectoryError(f"Root path is not a directory: {root_path}")
-
+    # Counts how many files have been affected and produces the total count as terminal output when the program is done.
     changed_files = 0
 
-    for folder, subfolders, files in os.walk(root_path):
-        folder_path = Path(folder)
-
-        for file in files:
+    for folder_path in root_path.rglob("*"):
+        if folder_path.is_file():
+            file = folder_path.name
             sanitized = sanitize_filename(file)
 
             if sanitized != file:
-                unique_name = ensure_unique_path(folder_path, sanitized)
+                unique_name = ensure_unique_path(folder_path.parent, sanitized)
 
-                old_path = folder_path / file
-                new_path = folder_path / unique_name
+                old_path = folder_path
+                new_path = folder_path.parent / unique_name
 
                 try:
-                    os.rename(old_path, new_path)
-                    logging.info(f"Renamed: {file} → {unique_name}")
+                    old_path.rename(new_path)
+                    logging.debug(f"Renamed: {file} → {unique_name}")
                     changed_files += 1
 
                 except PermissionError:
@@ -119,25 +89,7 @@ def normalize_filenames(root_path: Path) -> int:
 
 
 def main(argv=None) -> int:
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Normalize filenames according to FGS allowed characters."
-    )
-    parser.add_argument(
-        "--root",
-        type=str,
-        help="Root folder to run on. If no cli, the sip_root is determined by run_config.json."
-        )
-    
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Verbose logging."
-        )
-    args = parser.parse_args(argv)
-
+    args = parse_args(argv)
     setup_logging(args.verbose)
 
     try:

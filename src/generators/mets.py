@@ -54,8 +54,10 @@ def create_root_mets_element(submission) -> etree.Element:
         f"{NS_METS} schemas/mets.xsd {NS_XLINK} schemas/xlink.xsd {NS_CSIP} schemas/DILCISExtensionMETS.xsd"
     )
 
-    logging.debug("Created root <erms> element with namespaces, schema locations and other mandatory attributes.")
+    logging.debug(
+        "Created root <erms> element with namespaces, schema locations and other mandatory attributes.")
     return mets
+
 
 def create_metsHdr_element(mets_root: etree.Element, submission) -> etree.Element:
     """
@@ -72,7 +74,8 @@ def create_metsHdr_element(mets_root: etree.Element, submission) -> etree.Elemen
 
     metsHdr = etree.SubElement(mets_root, etree.QName(NS_METS, "metsHdr"))
 
-    metsHdr.set(etree.QName("CREATEDATE"), datetime.datetime.now().replace(microsecond=0).isoformat(timespec="seconds"))
+    metsHdr.set(etree.QName("CREATEDATE"), datetime.datetime.now().replace(
+        microsecond=0).isoformat(timespec="seconds"))
     metsHdr.set(etree.QName("RECORDSTATUS"), submission.get("recordstatus", ""))
     metsHdr.set(etree.QName(NS_CSIP, "OAISPACKAGETYPE"), "SIP")
 
@@ -118,20 +121,28 @@ def create_metsHdr_element(mets_root: etree.Element, submission) -> etree.Elemen
     agent_creator_organization = etree.SubElement(metsHdr, etree.QName(NS_METS, "agent"))
     agent_creator_organization.set(etree.QName("ROLE"), "CREATOR")
     agent_creator_organization.set(etree.QName("TYPE"), "ORGANIZATION")
-    agent_creator_organization_name = etree.SubElement(agent_creator_organization, etree.QName(NS_METS, "name"))
+    agent_creator_organization_name = etree.SubElement(
+        agent_creator_organization, etree.QName(NS_METS, "name"))
     agent_creator_organization_name.text = submission.get("creator_organization", "")
 
     # The individual at the organization responsible for the creation of the sip
     agent_creator_individual = etree.SubElement(metsHdr, etree.QName(NS_METS, "agent"))
     agent_creator_individual.set(etree.QName("ROLE"), "CREATOR")
     agent_creator_individual.set(etree.QName("TYPE"), "INDIVIDUAL")
-    agent_creator_individual_name = etree.SubElement(agent_creator_individual, etree.QName(NS_METS, "name"))
+    agent_creator_individual_name = etree.SubElement(
+        agent_creator_individual, etree.QName(NS_METS, "name"))
     agent_creator_individual_name.text = submission.get("creator_individual", "")
-    agent_creator_individual_note = etree.SubElement(agent_creator_individual, etree.QName(NS_METS, "note"))
+    agent_creator_individual_note = etree.SubElement(
+        agent_creator_individual, etree.QName(NS_METS, "note"))
     agent_creator_individual_note.text = submission.get("creator_individual_contact", "")
+
+    submission_agreement_id = etree.SubElement(metsHdr, etree.QName(NS_METS, "altRecordID"))
+    submission_agreement_id.set(etree.QName("TYPE"), "SUBMISSIONAGREEMENT")
+    submission_agreement_id.text = submission.get("submission_agreement", "")
 
     logging.debug("Created <metsHdr> element and children.")
     return metsHdr
+
 
 def add_filesec_section(mets_root: etree.Element) -> etree.Element:
     """
@@ -143,6 +154,7 @@ def add_filesec_section(mets_root: etree.Element) -> etree.Element:
     fileSec.set(etree.QName("ID"), "ID001")
 
     return fileSec
+
 
 def add_fileGrps(mets_fileSec: etree.Element, sip_root: Path) -> list[etree.Element]:
     """
@@ -167,7 +179,7 @@ def add_fileGrps(mets_fileSec: etree.Element, sip_root: Path) -> list[etree.Elem
         # Skip if there are no files
         if not contains_files:
             continue
-        
+
         fileGrp = etree.SubElement(mets_fileSec, etree.QName(NS_METS, "fileGrp"))
 
         fileGrp.set("ID", "ID" + str(uuid.uuid4()))
@@ -180,6 +192,7 @@ def add_fileGrps(mets_fileSec: etree.Element, sip_root: Path) -> list[etree.Elem
 
     return created_fileGrps
 
+
 def sha256_checksum(path: Path) -> str:
     """
     Calculates a checksum for a file using SHA-256 as a method.
@@ -190,6 +203,7 @@ def sha256_checksum(path: Path) -> str:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
+
 
 def add_files_to_fileGrp(fileGrp: etree.Element, folder_path: Path, sip_root: Path):
     """
@@ -236,6 +250,7 @@ def add_files_to_fileGrp(fileGrp: etree.Element, folder_path: Path, sip_root: Pa
         added_files.append(file_element)
 
     return added_files
+
 
 def add_structMap_csip(mets_root, folders):
     """
@@ -309,7 +324,7 @@ def main(argv=None) -> int:
         tree = build_mets_from_folder_structure(
             sip_root=sip_root,
             submission=submission
-            )
+        )
 
         # Create the xml-file
         write_xml(tree, output_path)
@@ -326,6 +341,7 @@ def main(argv=None) -> int:
     except Exception as exc:
         logging.error("Failed to generate METS XML: %s", exc, exc_info=args.verbose)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -21,9 +21,9 @@ The program currently uses a command-line interface (CLI) to run the programs:
 
 * csip_structure.py (obligatory)
 * normalize_filenames.py (optional)
-* cits_erms.py
-* mets.py
-* package_to_zip.py
+* cits_erms.py (obligatory)
+* mets.py (obligatory)
+* package_to_zip.py (obligatory)
 
 as default when the the program:
 
@@ -35,11 +35,11 @@ is ran through the CLI.
 
 #### To run the entire suite:
 Type:<br>
-`python -m src.cli.run_pipeline`<br>
-and the programs will be run in the correct order. You will be promted to answer a "y/n" terminal prompt to run or skip the optional program.
+`python -m src.cli.run_sip_packager`<br>
+when in the project root, `..\sip-packager` and the programs will be run in the correct order. You will be promted to answer a "y/n" terminal prompt to run or skip the optional program.
 
 #### To run each program as standalone:
-All core generator programs (csip_structure, cits_erms, mets, package_to_zip) and the tool (normalize_filenames) can also be ran as standalone and breaking with the default paths given in run_config.json. 
+All core generator programs (csip_structure, cits_erms, mets, package_to_zip) and the tool (normalize_filenames) can also be ran as standalone and breaking with the default paths given in run_config.json. Note however that they require the CSIP folder structure (as argument for --root) in order to be ran properly.
 
 They all take the first command-line argument, `--root`, as a replacement for "sip_root". 
 
@@ -59,6 +59,8 @@ To run the program successfully, it requires that you can provide a folder struc
 
 ![](/docs/example_structure.png)
 
+### external libraries
+Besides needing python, the project also requires you to install some external libraries.
 
 ### run_config.json
 In the subfolder /config there is a configuration file called "run_config.json". It holds three key-value pairs that are part of the setup of the program.
@@ -100,4 +102,7 @@ The program takes the file "Klassa_2_1.xlsx" as default, but this can be overwri
 `python -m src.tools.extract klassa.py "klassa_local.xlsx"`<br>to overwrite the default file to be read.
 
 In order for this project to be truly useful, it would require more data based on the classification of the information, such as access restrictions, retention policies and so forth. With this data in a machine-readable format it could then be mapped to metadata elements in the erms.xml file simple based off of the name of the folder that the file is in!
+
+## About
+This repository was originally handed in as my final project for the CS50x course in 2026.
 

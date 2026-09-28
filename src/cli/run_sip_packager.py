@@ -2,7 +2,7 @@
 Runs the full SIP packaging pipeline:
 
 1. csip_structure.py
-2. (optional) normalize_filenames.py
+2. normalize_filenames.py (optional)
 3. cits_erms.py
 4. mets.py
 5. package_to_zip.py
@@ -30,7 +30,7 @@ def parse_args(argv=None):
     )
 
     parser.add_argument(
-        "--verbose",
+        "-v", "--verbose",
         action="store_true",
         help="Enable debug logging."
     )

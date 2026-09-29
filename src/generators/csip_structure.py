@@ -21,14 +21,17 @@ def validate_erms_file_count(erms_input: Path, max_files: int) -> None:
     """
     validate_root_path(erms_input)
 
+
+    # Coount the number of files that are to be included in the SIP.
+    # Checks against the MAX_FILES in run_config.json.
     file_count = sum(1 for p in erms_input.rglob("*") if p.is_file())
 
     logging.info("Number of files in input: %d", file_count)
 
     if file_count > max_files:
         raise ValueError(
-            "The folder contains %d files which exceeds the limit: %d. "
-            "Aborts the program to avoid future complications.", file_count, max_files
+            f"The folder contains {file_count} files which exceeds the limit: {max_files}. "
+            "Aborts the program to avoid future complications."
         )
 
 
@@ -95,7 +98,6 @@ def copy_erms_input(erms_input: Path, sip_root: Path) -> None:
     validate_root_path(erms_input)
 
     # Note that this implementation only ever makes use of one representation, but that this rep in turn can contain subfolders.
-
     target = sip_root / "representations" / "rep_001"
 
     logging.info("Copies folders from %s to %s", erms_input, target)

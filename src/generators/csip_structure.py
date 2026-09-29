@@ -4,6 +4,7 @@ The program creates a CSIP file structure and copies the folders and underlying 
 
 import logging
 import shutil
+import sys
 from pathlib import Path
 from src.common.utils import (
     parse_args,
@@ -146,4 +147,4 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

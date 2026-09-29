@@ -5,9 +5,10 @@ Note that the program does not remove the folder SIP.
 """
 
 import logging
-import zipfile
 from pathlib import Path
 import xml.etree.ElementTree as ET
+import sys
+import zipfile
 from src.common.utils import (
     parse_args,
     setup_logging,
@@ -88,4 +89,4 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

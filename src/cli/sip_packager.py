@@ -11,6 +11,7 @@ Runs the full SIP packaging pipeline:
 import datetime
 import logging
 import subprocess
+import sys
 
 from src.common.utils import (
     setup_logging,
@@ -42,7 +43,7 @@ def parse_args(argv=None):
 def run_step(description: str, module_path: str) -> None:
     """
     Runs a Python module using subprocess and raises an error if it fails.
-    Is run for each module in the pipeline. 
+    Is run for each module in the pipeline.
     """
     logging.info("Running step: %s", description)
 
@@ -109,4 +110,4 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

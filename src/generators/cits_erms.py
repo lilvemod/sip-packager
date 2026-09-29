@@ -135,7 +135,7 @@ def create_aggregation_for_folder(parent, folder, klassa, submission):
     classification.text = folder.name
 
     if folder.name not in klassa:
-        raise KeyError("Classification not found in json: %s", folder.name)
+        raise KeyError(f"Classification not found in json: {folder.name}")
 
     # Dynamic attribution of title text as name of process based on KLASSA mapping
     title = etree.SubElement(aggregation, etree.QName(NS_ERMS, "title"))

@@ -8,6 +8,7 @@ Runs the full SIP packaging pipeline:
 5. package_to_zip.py
 """
 
+import datetime
 import logging
 import subprocess
 
@@ -41,8 +42,11 @@ def parse_args(argv=None):
 def run_step(description: str, module_path: str) -> None:
     """
     Runs a Python module using subprocess and raises an error if it fails.
+    Is run for each module in the pipeline. 
     """
-    logging.info(f"Running step: {description}")
+    logging.info("Running step: %s", description)
+
+    start = datetime.datetime.now()
 
     result = subprocess.run(
         ["python", "-m", module_path],
@@ -50,13 +54,16 @@ def run_step(description: str, module_path: str) -> None:
         text=True
     )
 
+    elapsed = datetime.datetime.now() - start
+
+    # If the program returns 0 it means it ran correctly
     if result.returncode != 0:
-        logging.error(f"Step failed: {description}")
+        logging.error("Step failed: %s", description)
         logging.error(result.stderr)
+        # Uses string formatting rather that %-formatting to avoid formatting issues that otherwise would occurs when building 'description'
         raise RuntimeError(f"Pipeline aborted at step: {description}")
 
-    logging.info(result.stdout)
-    logging.info(f"Step completed: {description}")
+    logging.info("Step completed: %s, (%.2f seconds)", description, elapsed.total_seconds())
 
 
 def main(argv=None) -> int:
@@ -97,7 +104,7 @@ def main(argv=None) -> int:
         return 0
 
     except Exception as exc:
-        logging.error(f"Pipeline failed: {exc}")
+        logging.error("Pipeline failed: %s", exc)
         return 1
 
 

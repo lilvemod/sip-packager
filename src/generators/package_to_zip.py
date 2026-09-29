@@ -22,7 +22,7 @@ def extract_objid_from_mets(mets_path: Path) -> str:
     Reads mets.xml and extracts the OBJID attribute.
     """
     if not mets_path.exists():
-        raise FileNotFoundError("mets.xml not found at: %s", mets_path)
+        raise FileNotFoundError(f"mets.xml not found at: {mets_path}")
 
     try:
         tree = ET.parse(mets_path)
@@ -36,7 +36,7 @@ def extract_objid_from_mets(mets_path: Path) -> str:
         return objid
 
     except Exception as exc:
-        raise ValueError("Could not parse mets.xml: %s", exc)
+        raise ValueError(f"Could not parse mets.xml: {exc}")
 
 
 def zip_sip_folder(sip_root: Path, zip_path: Path) -> None:

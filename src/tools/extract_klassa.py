@@ -54,19 +54,24 @@ def validate_excel_file(path: Path) -> pd.DataFrame:
 def transform_df_to_mapping(rows) -> dict:
     """
     Transform the data frame into key-value pairs.
+    The data is structured into four columns in the xlsx file. The first three are single digits that together identify a unique designation
+    within the classification structure, the fourth is a textual description of what the designation points to.
     """
     result = {}
 
+    # vt is short for verksamhetstyp, vo for verksamhetsområde and pg for processgrupp
     for _, row in rows:
-        a, b, c, process = row[0], row[1], row[2], row[3]
+        vt, vo, pg, process = row[0], row[1], row[2], row[3]
 
         if not isinstance(process, str) or not process.strip():
             continue
 
-        if pd.isna(c):
-            key = f"{int(a)}.{int(b)}"
+        # If the value of the third row is NaN, then only count the first two. This is true everytime a verksamhetsområde is found in the data.
+        # The logic can be extended if the data has to support a structure down to the fourth level (processes).
+        if pd.isna(pg):
+            key = f"{int(vt)}.{int(vo)}"
         else:
-            key = f"{int(a)}.{int(b)}.{int(c)}"
+            key = f"{int(vt)}.{int(vo)}.{int(pg)}"
 
         result[key] = process.strip()
 

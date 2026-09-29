@@ -107,7 +107,7 @@ Most regional or municipal agencies uses some variant of either KLASSA (made pub
 This program allows you to easily produce a json-file that is adapted to your local classifications so long as you can provide a cleaned up XLSX-file that is structured like the file "Klassa_2_1.xlsx" found in the subfolder /config.
 
 The program takes the file "Klassa_2_1.xlsx" as default, but this can be overwritten by using a command-line argument. If you want to extract data from another XLSX-file, place it in the config subfolder and give its filename as a command-line argument. For instance, if you have a file called "klassa_local.xlsx" in the config folder run:<br>
-`python -m src.tools.extract klassa.py "klassa_local.xlsx"`<br>to overwrite the default file to be read.
+`python -m src.tools.extract_klassa.py "klassa_local.xlsx"`<br>to overwrite the default file to be read.
 
 In order for this project to be truly useful, it would require more data based on the classification of the information, such as access restrictions, retention policies and so forth. With this data in a machine-readable format it could then be mapped to metadata elements in the erms.xml file simple based off of the name of the folder that the file is in!
 

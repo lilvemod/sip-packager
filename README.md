@@ -27,7 +27,7 @@ The program currently uses a command-line interface (CLI) to run the programs:
 
 as default when the the program:
 
-* run_sip_packager.py
+* sip_packager.py
 
 is ran through the CLI.
 
@@ -35,7 +35,7 @@ is ran through the CLI.
 
 #### To run the entire suite:
 Type:<br>
-`python -m src.cli.run_sip_packager`<br>
+`python -m src.cli.sip_packager`<br>
 when in the project root, `..\sip-packager` and the programs will be run in the correct order. You will be promted to answer a "y/n" terminal prompt to run or skip the optional program.
 
 #### To run each program as standalone:

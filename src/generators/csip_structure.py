@@ -23,18 +23,18 @@ def validate_erms_file_count(erms_input: Path, max_files: int) -> None:
 
     file_count = sum(1 for p in erms_input.rglob("*") if p.is_file())
 
-    logging.info(f"Number of files in input: {file_count}")
+    logging.info("Number of files in input: %d", file_count)
 
     if file_count > max_files:
         raise ValueError(
-            f"The folder contains {file_count} files which exceeds the limit: {max_files}. "
-            "Aborts the program to avoid future complications."
+            "The folder contains %d files which exceeds the limit: %d. "
+            "Aborts the program to avoid future complications.", file_count, max_files
         )
 
 
 def rename_existing_sip_folder(sip_root: Path) -> None:
     """
-    If SIP folder already exists, rename it to SIP_OLD, SIP_OLD_2, SIP_OLD_3, etc.
+    If the SIP folder already exists rename it to avoid file collisions
     """
     if not sip_root.exists():
         return
@@ -52,7 +52,7 @@ def rename_existing_sip_folder(sip_root: Path) -> None:
         counter += 1
         candidate = base / f"{old_name}_{counter}"
 
-    logging.warning(f"SIP-folder already exists. Renames to: {candidate}")
+    logging.warning("SIP-folder already exists. Renames to: %s", candidate)
     sip_root.rename(candidate)
 
 
@@ -60,7 +60,7 @@ def create_csip_structure(sip_root: Path) -> None:
     """
     Create the CSIP folder structure.
     """
-    logging.debug(f"Creating CSIP structure at: {sip_root}")
+    logging.debug("Creating CSIP structure at: %s", sip_root)
 
     # These are the baseline subfolders in CSIP. If there is a need to expand, do so here.
     (sip_root / "metadata").mkdir(parents=True, exist_ok=True)
@@ -81,7 +81,7 @@ def copy_schemas(project_root: Path, sip_root: Path) -> None:
 
     validate_root_path(source)
 
-    logging.debug(f"Copies schemas {source} to {target}")
+    logging.debug("Copies schemas %s to %s", source, target)
 
     for schema in source.glob("*"):
         if schema.is_file():
@@ -98,7 +98,7 @@ def copy_erms_input(erms_input: Path, sip_root: Path) -> None:
 
     target = sip_root / "representations" / "rep_001"
 
-    logging.info(f"Copies folders from {erms_input} to {target}")
+    logging.info("Copies folders from %s to %s", erms_input, target)
 
     for folder in erms_input.iterdir():
         if folder.is_dir():
@@ -113,7 +113,7 @@ def main(argv=None) -> int:
         project_root = determine_project_root()
         config = load_run_config(project_root)
     except Exception as exc:
-        logging.error(f"Could not load run_config.json: {exc}")
+        logging.error("Could not load run_config.json: %s", exc)
         return 1
 
     # Path to where the CSIP structure should be created
@@ -125,8 +125,8 @@ def main(argv=None) -> int:
     # No fallback is set since the the program throws an exception if it can't read from config
     max_files = config.get("maximum_files")
 
-    logging.info(f"SIP-root: {sip_root}")
-    logging.info(f"ERMS-input: {erms_input}")
+    logging.info("SIP-root: %s", sip_root)
+    logging.info("ERMS-input: %s", erms_input)
 
     try:
         validate_erms_file_count(erms_input, max_files)
@@ -139,7 +139,7 @@ def main(argv=None) -> int:
         return 0
 
     except Exception as exc:
-        logging.error(f"Failed in creating CSIP structure: {exc}")
+        logging.error("Failed in creating CSIP structure: %s", exc)
         return 1
 
 

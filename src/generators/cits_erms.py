@@ -135,7 +135,7 @@ def create_aggregation_for_folder(parent, folder, klassa, submission):
     classification.text = folder.name
 
     if folder.name not in klassa:
-        raise KeyError(f"Classification not found in json: {folder.name}")
+        raise KeyError("Classification not found in json: %s", folder.name)
 
     # Dynamic attribution of title text as name of process based on KLASSA mapping
     title = etree.SubElement(aggregation, etree.QName(NS_ERMS, "title"))
@@ -245,7 +245,7 @@ def main(argv=None) -> int:
 
         elapsed = datetime.datetime.now() - start_time
         logging.info(
-            f"Done. The program {Path(__file__).name} took {elapsed.total_seconds():.2f} seconds to run"
+            "Done. The program %s took %.2f seconds to run", Path(__file__).name, elapsed.total_seconds()
         )
         return 0
 

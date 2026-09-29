@@ -25,7 +25,7 @@ def parse_args(argv=None):
     )
 
     parser.add_argument(
-        "-o","--output",
+        "-o", "--output",
         type=str,
         help="See the use of the function in the program that makes use of it."
     )
@@ -42,9 +42,8 @@ def parse_args(argv=None):
 # ----------------------------------------
 # Logging
 # ----------------------------------------
-
-
 def setup_logging(verbose: bool):
+    # Logging is set to print down to INFO as default, DEBUG if -v or --verbose is ran as an additional argument at runtime
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
         level=level,
@@ -55,8 +54,6 @@ def setup_logging(verbose: bool):
 # ----------------------------------------
 # Project root detection
 # ----------------------------------------
-
-
 def determine_project_root() -> Path:
     root = Path(__file__).resolve().parents[2]
     if not (root / "config").exists():
@@ -67,8 +64,6 @@ def determine_project_root() -> Path:
 # ----------------------------------------
 # Root path validation
 # ----------------------------------------
-
-
 def validate_root_path(path: Path):
     if not path.exists():
         raise FileNotFoundError(f"Root path does not exist: {path}")
@@ -82,10 +77,10 @@ def validate_root_path(path: Path):
 
 def load_run_config(project_root: Path) -> dict:
     path = project_root / "config" / "run_config.json"
-    logging.debug(f"Loading run_config from: {path}")
+    logging.debug("Loading run_config from: %s", path)
 
     if not path.exists():
-        raise FileNotFoundError(f"run_config.json is missing: {path}")
+        raise FileNotFoundError("run_config.json is missing: %s", path)
 
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
@@ -97,10 +92,10 @@ def load_run_config(project_root: Path) -> dict:
 
 def load_submission_agreement(project_root: Path) -> dict:
     path = project_root / "config" / "profiles" / "submission_agreement.json"
-    logging.debug(f"Loading submission_agreement from: {path}")
+    logging.debug("Loading submission_agreement from: %s", path)
 
     if not path.exists():
-        raise FileNotFoundError(f"submission_agreement.json is missing: {path}")
+        raise FileNotFoundError("submission_agreement.json is missing: %s", path)
 
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
@@ -112,10 +107,10 @@ def load_submission_agreement(project_root: Path) -> dict:
 
 def load_klassa_processer(project_root: Path) -> dict:
     path = project_root / "config" / "klassa_processer.json"
-    logging.debug(f"Loading klassa_processer from: {path}")
+    logging.debug("Loading klassa_processer from: %s", path)
 
     if not path.exists():
-        raise FileNotFoundError(f"klassa_processer.json is missing: {path}")
+        raise FileNotFoundError("klassa_processer.json is missing: %s", path)
 
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
@@ -127,10 +122,10 @@ def load_klassa_processer(project_root: Path) -> dict:
 
 def write_xml(tree: etree.ElementTree, output_path: Path) -> None:
     if output_path.exists() and output_path.is_dir():
-        raise IsADirectoryError(f"Output path is a directory: {output_path}")
+        raise IsADirectoryError("Output path is a directory: %s", output_path)
 
     if output_path.parent and not output_path.parent.exists():
-        raise FileNotFoundError(f"Output directory does not exist: {output_path.parent}")
+        raise FileNotFoundError("Output directory does not exist: %s", output_path.parent)
 
     logging.debug("Writing XML to: %s", output_path)
 

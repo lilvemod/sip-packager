@@ -334,7 +334,7 @@ def main(argv=None) -> int:
 
         # If nothing went wrong, tell the user that the program is done running and how long it took to run
         logging.info(
-            f"Done. The program {Path(__file__).name} took {elapsed.total_seconds():.2f} seconds to run"
+            "Done. The program %s took %.2f seconds to run", Path(__file__).name, elapsed.total_seconds()
         )
         return 0
 

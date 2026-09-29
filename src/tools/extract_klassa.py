@@ -28,18 +28,18 @@ def validate_excel_file(path: Path) -> pd.DataFrame:
     """
 
     if not path.exists():
-        logging.error(f"File '{path.name}' was not found in config/.")
+        logging.error("File %s was not found in config/.", path.name)
         raise FileNotFoundError(path)
 
     if path.suffix.lower() not in [".xlsx", ".xls"]:
-        logging.error(f"File '{path.name}' is not an Excel file (.xlsx or .xls).")
+        logging.error("File %s is not an Excel file (.xlsx or .xls).", path.name)
         raise ValueError("Invalid extension")
 
     try:
         df = pd.read_excel(path, header=None)
     except Exception as e:
-        logging.error(f"File '{path.name}' could not be read as an Excel file.")
-        logging.error(f"Details: {e}")
+        logging.error("File %s could not be read as an Excel file.", path.name)
+        logging.error("Details: %s", e)
         raise
 
     if df.shape[1] < 4:
@@ -47,7 +47,7 @@ def validate_excel_file(path: Path) -> pd.DataFrame:
             f"Excel file must have at least 4 columns, but it has {df.shape[1]}."
         )
 
-    logging.info(f"Excel file '{path.name}' validated successfully.")
+    logging.info("Excel file %s validated successfully.", path.name)
     return df
 
 
@@ -87,7 +87,7 @@ def backup_old_json(output_path: Path):
             candidate = output_path.parent / f"{DEFAULT_CANDIDATE_FILENAME}_{counter}.json"
 
         output_path.rename(candidate)
-        logging.info(f"Existing JSON backed up as: {candidate}")
+        logging.info("Existing JSON backed up as: %s", candidate)
 
 
 def write_output_json(mapping: dict, output_path: Path):
@@ -97,7 +97,7 @@ def write_output_json(mapping: dict, output_path: Path):
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(mapping, f, ensure_ascii=False, indent=4)
 
-    logging.info(f"JSON-file created: {output_path}")
+    logging.info("JSON-file created: %s", output_path)
 
 
 def main(argv=None):
@@ -138,6 +138,7 @@ def main(argv=None):
     except Exception as exc:
         logging.error("Failed to generate JSON: %s", exc, exc_info=args.verbose)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

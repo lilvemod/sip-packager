@@ -75,15 +75,15 @@ def normalize_filenames(root_path: Path) -> int:
 
                 try:
                     old_path.rename(new_path)
-                    logging.debug(f"Renamed: {file} → {unique_name}")
+                    logging.debug("Renamed: %s to %s", file, unique_name)
                     changed_files += 1
 
                 except PermissionError:
                     logging.warning(
-                        f"Could not rename '{file}' because it is open in another program."
+                        "Could not rename %s because it is open in another program.", file
                     )
                 except OSError as exc:
-                    logging.error(f"Failed to rename '{file}': {exc}")
+                    logging.error("Failed to rename %s: %s", file, exc)
 
     return changed_files
 
@@ -96,7 +96,7 @@ def main(argv=None) -> int:
         project_root = determine_project_root()
         config = load_run_config(project_root)
     except Exception as exc:
-        logging.error(f"Failed to load run_config.json: {exc}")
+        logging.error("Failed to load run_config.json: %s", exc)
         return 1
 
     root_path = Path(args.root) if args.root else Path(config["sip_root"])
@@ -108,11 +108,11 @@ def main(argv=None) -> int:
             logging.info("No files contained disallowed characters. Exiting.")
             return 0
 
-        logging.info(f"Done. {changed} files were renamed in {root_path}.")
+        logging.info("Done. %s files were renamed in %s.", changed, root_path)
         return 0
 
     except Exception as exc:
-        logging.error(f"Fatal error: {exc}")
+        logging.error("Fatal error: %s", exc)
         return 1
 
 

@@ -21,20 +21,28 @@ DEFAULT_FILE_TO_READ = "Klassa_2_1.xlsx"
 DEFAULT_CANDIDATE_FILENAME = "klassa_processer_OLD"
 
 
-def validate_excel_file(path: Path) -> pd.DataFrame:
+def validate_excel_file(path: Path) -> bool:
     """
-    Validate that the file exists, is an Excel file, can be read, and has enough columns.
-    The input must follow the structure and data types of the example XSLSX file found under config/
+    Validate that the file exists and is an Excel file.
     """
 
+    path = Path(path)
     if not path.exists():
         logging.error("File %s was not found in config/.", path.name)
-        raise FileNotFoundError(path)
-
+        return False
+    
     if path.suffix.lower() not in [".xlsx", ".xls"]:
         logging.error("File %s is not an Excel file (.xlsx or .xls).", path.name)
-        raise ValueError("Invalid extension")
+        return False
 
+    return True
+
+
+def read_excel_file(path: Path) -> pd.DataFrame:
+    """
+    Read the Excel file and return a DataFrame.
+    The input must follow the structure and data types of the example XSLSX file found under config/
+    """
     try:
         df = pd.read_excel(path, header=None)
     except Exception as e:
@@ -114,13 +122,18 @@ def main(argv=None):
     try:
         project_root = determine_project_root()
         config_dir = project_root / "config"
+        logging.info("Config directory: %s", config_dir)
 
         # Determine input file
         file_to_read = args.root if args.root else DEFAULT_FILE_TO_READ
         excel_path = config_dir / file_to_read
 
+        if not validate_excel_file(excel_path):
+            logging.error("Validation failed.")
+            raise ValueError
+        
         # Read the data from the excel file
-        df = validate_excel_file(excel_path)
+        df = read_excel_file(excel_path)
 
         # Transform to a mapping
         mapping = transform_df_to_mapping(df.iterrows())

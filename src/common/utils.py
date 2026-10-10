@@ -11,8 +11,6 @@ from pathlib import Path
 # ----------------------------------------
 # Function to allow for command-line arguments that override the default paths from run_config and the logging level to debugger
 # ----------------------------------------
-
-
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Handles up to three command-line arguments, with some variations between uses"
@@ -31,7 +29,7 @@ def parse_args(argv=None):
     )
 
     parser.add_argument(
-        "--verbose",
+        "v", "--verbose",
         action="store_true",
         help="Sets logging to debug-mode."
     )
@@ -73,8 +71,6 @@ def validate_root_path(path: Path):
 # ----------------------------------------
 # Load the run_config.json file
 # ----------------------------------------
-
-
 def load_run_config(project_root: Path) -> dict:
     path = project_root / "config" / "run_config.json"
     logging.debug("Loading run_config from: %s", path)
@@ -88,8 +84,6 @@ def load_run_config(project_root: Path) -> dict:
 # ----------------------------------------
 # Load the submission_agreement.json file
 # ----------------------------------------
-
-
 def load_submission_agreement(project_root: Path) -> dict:
     path = project_root / "config" / "profiles" / "submission_agreement.json"
     logging.debug("Loading submission_agreement from: %s", path)
@@ -103,8 +97,6 @@ def load_submission_agreement(project_root: Path) -> dict:
 # ----------------------------------------
 # Load the klassa_processer.json file
 # ----------------------------------------
-
-
 def load_klassa_processer(project_root: Path) -> dict:
     path = project_root / "config" / "klassa_processer.json"
     logging.debug("Loading klassa_processer from: %s", path)
@@ -118,8 +110,6 @@ def load_klassa_processer(project_root: Path) -> dict:
 # ----------------------------------------
 # Write XML as output (with pretty print)
 # ----------------------------------------
-
-
 def write_xml(tree: etree.ElementTree, output_path: Path) -> None:
     if output_path.exists() and output_path.is_dir():
         raise IsADirectoryError("Output path is a directory: %s", output_path)

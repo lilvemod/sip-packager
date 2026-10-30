@@ -65,7 +65,7 @@ def create_control_element(erms_root, submission):
 
     identification = etree.SubElement(control, etree.QName(NS_ERMS, "identification"))
     identification.set("identificationType", "UUID")
-    identification.text = str(uuid.uuid4())
+    identification.text = "uuid-" + str(uuid.uuid4())
 
     information_class = etree.SubElement(control, etree.QName(NS_ERMS, "informationClass"))
     information_class.text = submission.get("information_class", "")
@@ -114,13 +114,13 @@ def add_aggregations_container(erms_root: etree.Element) -> etree.Element:
     return etree.SubElement(erms_root, etree.QName(NS_ERMS, "aggregations"))
 
 
-def create_aggregation_for_folder(parent, folder, klassa, submission):
+def create_class_aggregation_for_folder(parent, folder, klassa, submission):
     """
     Creates an aggregation element for each folder under the given path. Uses a minimal profile of required metadata to validate against the CITS-ERMS schema.
     """
     aggregation = etree.SubElement(parent, etree.QName(NS_ERMS, "aggregation"))
 
-    aggregation.set("systemIdentifier", str(uuid.uuid4()))
+    aggregation.set("systemIdentifier", "UUID:" + str(uuid.uuid4()))
 
     aggregation.set("aggregationType", "class")
 
@@ -144,23 +144,53 @@ def create_aggregation_for_folder(parent, folder, klassa, submission):
     logging.debug("Created <aggregation> element for folder: %s", folder)
     return aggregation
 
+def create_casefile_aggregation_for_folder(parent, folder, submission):
+    """
+    Creates an aggregation element for each folder found within a class folder.
+    """
 
-def create_record_for_file(records_container, file_path, output_path, klassa, submission) -> None:
+    aggregation_casefile = etree.SubElement(parent, etree.QName(NS_ERMS, "aggregation"))
+    aggregation_casefile.set("systemIdentifier", "UUID:" + str(uuid.uuid4()))
+    aggregation_casefile.set("aggregationType", "caseFile")
+    object_id = etree.SubElement(aggregation_casefile, etree.QName(NS_ERMS, "objectId"))
+    object_id.text = f"{folder.parent.name}/{folder.name}"
+
+    title_casefile = etree.SubElement(aggregation_casefile, etree.QName(NS_ERMS, "title"))
+    title_casefile.text = folder.name
+
+    logging.debug("Created <aggregation> element for case file folder: %s", folder)
+    return aggregation_casefile
+
+
+def create_record_for_file(records_container, file_path, output_path, klassa, submission, classification_code) -> None:
     """
     Creates a record element for each file directly under the aggregation folder. Uses a minimal profile of required metadata to validate against the CITS-ERMS schema.
     """
     record = etree.SubElement(records_container, etree.QName(NS_ERMS, "record"))
-    record.set("systemIdentifier", str(uuid.uuid4()))
+    record.set("systemIdentifier", "UUID:" + str(uuid.uuid4()))
 
     object_id = etree.SubElement(record, etree.QName(NS_ERMS, "objectId"))
-    object_id.text = str(uuid.uuid4())
+    object_id.text = "uuid-" + str(uuid.uuid4())
 
     classification = etree.SubElement(record, etree.QName(NS_ERMS, "classification"))
-    classification.text = file_path.parent.name + " " + \
-        klassa.get(file_path.parent.name, file_path.parent.name)
+    classification.text = (
+        f"{classification_code} "
+        f"{klassa.get(classification_code, classification_code)}"
+    )
+
+    file_name = str(file_path.name)
+    clean_file_name = file_name.replace("_sekretess", "").replace("_signerad", "").replace("_", "")
+
 
     title = etree.SubElement(record, etree.QName(NS_ERMS, "title"))
-    title.text = str(file_path.name)
+    title.text = clean_file_name
+
+    if "_sekretess" in file_name:
+        restriction = etree.SubElement(record, etree.QName(NS_ERMS, "restriction"))
+        restriction.set("restrictionType", "other_type")
+        restriction.set("otherRestrictionType", "secrecy")
+        regulation = etree.SubElement(restriction, etree.QName(NS_ERMS, "regulation"))
+        regulation.text = "OSL, paragraf ej angiven"
 
     dates = etree.SubElement(record, etree.QName(NS_ERMS, "dates"))
     date = etree.SubElement(dates, etree.QName(NS_ERMS, "date"))
@@ -174,6 +204,9 @@ def create_record_for_file(records_container, file_path, output_path, klassa, su
     appendix.set("name", file_path.name)
     relative = file_path.relative_to(output_path.parent)
     appendix.set("path", str(relative))
+    if "_signerad" in file_name:
+        eSignature = etree.SubElement(appendix, etree.QName(NS_ERMS, "eSignature"))
+        eSignature.set("present", "true")
 
     logging.debug("Created <record> element for file: %s", file_path)
 
@@ -185,26 +218,57 @@ def build_erms_from_folder_structure(root_path, output_path, klassa, submission)
     create_control_element(erms_root, submission)
     aggregations = add_aggregations_container(erms_root)
 
+    # Skips loose files at root
     for child in sorted(root_path.iterdir()):
         if not child.is_dir():
             logging.debug("Ignoring non-directory at root: %s", child)
             continue
 
-        logging.debug("Processing folder as aggregation: %s", child)
-        try:
-            records_container = create_aggregation_for_folder(
-                aggregations, child, klassa, submission)
-        except KeyError:
-            logging.error("Skipping folder due to missing classification: %s", child)
-            continue
+        # Calls the function to create the class aggregations for each folder under root
+        parent_aggregation = create_class_aggregation_for_folder(
+            aggregations,
+            child,
+            klassa,
+            submission
+        )
 
+        classification_code = child.name
+
+        # Creates records belonging to the class aggregation
         for item in sorted(child.iterdir()):
-            if item.is_dir():
-                logging.warning("Ignoring nested directory inside %s: %s", child, item)
-                continue
-
-            logging.debug("Adding file as record: %s", item)
-            create_record_for_file(records_container, item, output_path, klassa, submission)
+            if item.is_file():
+                create_record_for_file(
+                    parent_aggregation,
+                    item,
+                    output_path,
+                    klassa,
+                    submission,
+                    classification_code=classification_code
+                )
+            # Creates a casfile aggregation for each folder found within a class folder
+            elif item.is_dir():
+                child_aggregation = create_casefile_aggregation_for_folder(
+                    parent_aggregation,
+                    item,
+                    submission
+                )
+                # Creates records belonging to the casefile aggregation
+                for subitem in sorted(item.iterdir()):
+                    if subitem.is_file():
+                        create_record_for_file(
+                            child_aggregation,
+                            subitem,
+                            output_path,
+                            klassa,
+                            submission,
+                            classification_code=classification_code
+                        )
+                    # If another folder is found within the casefile aggregation, it will be ignored and logged as such.
+                    else:
+                        logging.debug(
+                            "Ignoring directory %s, below supported depth of structure",
+                            subitem
+                        )
 
     return etree.ElementTree(erms_root)
 

@@ -8,13 +8,16 @@ The specifications include a folder structure within a ZIP-file along with at le
 ### Who is the program for?
 The program is mainly intended for people in the regional or municipal sectors in Sweden who work with e-archiving and digital preservation.
 
-The specifications that this program adheres to in the creation of Submission information packages were appointed as FGS Paketstruktur 2.0 and FGS för Ärende 2.0 by the national archives, Riksarkivet, in 2023.
+It allows users to create Submission information packages according to FGS för Paketstruktur 2.0 and FGS för Ärende 2.0. 
+
+*Note: on October 16 2026 Riksarkivet decided on a new standard, FGS för Ärende 3.0 (which is based on CITS-ERMS v.3). Although technically backwards compatible in this implementation, this program does not use the schema and schematron files for this version.*
+
 
 ## Why is this program needed?
 
-Although the specifications have been appointed for over three years, very few systems or other methods exist that produces SIPs according to these standards(!!). Most of the time, FGS Paketstruktur 1.2 (or even the unappointed project version) is being used alongside FGS för Ärende 1.0. And that's for when an actual standard is being used and not a strictly local description. It is also common that organizations create csv-files and then map that data on to elements from FGS för Ärende 1.0.
+Although the specifications have been appointed for over three years, very few systems or other methods exist that produces SIPs according to these standards(!!). Most of the time, FGS Paketstruktur 1.2 (or even the unappointed project version) is being used alongside FGS för Ärende 1.0. It is also common that organizations create csv-files and then map that data on to elements from FGS för Ärende 1.0. I am of the opinion that it is important that the archival sector uses common standards for describing and delivering digital archives, but that it needs to be easier to do so for smaller organizations.
 
-The purpose of this program is to make it a little easier for archival institutions in Sweden to actually begin making use of these standards. The program also removes **most** of the manual work with preparing material for delivery. No more manually typing data into csv *(just a few lines in JSON)*!
+So that is the real purpose of this program! To to make it a little easier for archival institutions in Sweden to actually begin making use of these standards. The program also removes **most** of the manual work with preparing material for delivery. No more manually typing data into csv *(just a few lines in JSON)*!
 
 ## How the program works:
 The program currently uses a command-line interface (CLI) to run the programs:
@@ -53,11 +56,21 @@ If something goes wrong when you attempt to run a program, add:<br>
 To run the programs properly, you do have to perform **some** manual typing and do a little bit of setup.
 
 ### pre-existing folder structure
-To run the program successfully, it requires that you can provide a folder structure with the names of the folders corresponding to classification designations from Klassa 2.1, such as "1.1.1" or "3.6.5" and so on. Directly under these folders there should be files. Each folder will be created as an aggregation element of type "class" in the erms.xml file. All files under the folder will be structured as child record elements to that particular aggregation element.
+To run the program successfully, it requires that you can provide a folder structure with the names of the folders corresponding to classification designations from Klassa 2.1, such as "1.1.1" or "3.6.5" and so on. The program offers two alternatives for the structure beyond this.
 
-#### example folder structure:
+#### example 1
+ Directly under these folders there should be files. Each folder will be created as an aggregation element of type "class" in the erms.xml file. All files under the folder will be structured as child record elements to that particular aggregation element.
 
-![](/docs/example_structure.png)
+#### example 1 folder structure:
+
+![](/docs/example1_structure.png)
+
+#### example 2
+Under the class folders there can be another level of folders, which when created will be represented by an aggregation element of the type "caseFil" and be a child element the case folder it is contained within. CITS-ERMS does not allow for an aggregation to have both a child aggregation element AND records, so when a casefile folder exists within a class folder there can never be any files directly under that class folder. Note that this only is true for those class folders where there are casefile folders, and another class folder can have files directly under it.
+
+#### example 2 folder structure:
+
+![](/docs/example2_structure.png)
 
 ### external libraries
 Besides needing python, the project also requires you to install some external libraries.
@@ -94,7 +107,7 @@ Apart from the core program to create a valid CSIP package there are two additio
 * extract_klassa.py
 
 ### normalize_filenames.py
-This program is run as an option, but could be used as a standalone tool for changing out the common swedish characters, 'ä', 'å' and 'ö' as well as whitespaces in filenames. It is included in this project since Riksarkivet, in all iterations of FGS för paktestruktur have had the additinal requirement that only the following characters are allowed:<br>
+This program is run as an option, but could be used as a standalone tool for changing out the common swedish characters, 'ä', 'å' and 'ö' as well as whitespaces in filenames. It is included in this project since Riksarkivet, in all iterations of FGS för paktestruktur have had the additional requirement that only the following characters are allowed:<br>
 `a..z, A..Z, 0..9, ”-” and ”_”`
 
 The program replaces whitespace with "_" and äÄ with aA, åÅ with aA and öÖ with oO.
